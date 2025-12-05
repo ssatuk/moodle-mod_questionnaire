@@ -1002,6 +1002,46 @@ function xmldb_questionnaire_upgrade($oldversion=0) {
         upgrade_mod_savepoint(true, 2022121600.02, 'questionnaire');
     }
 
+    if ($oldversion < 2022121601.01) {
+        // Add removeafter fields.
+        $table = new xmldb_table('questionnaire');
+        $field = new xmldb_field('removeafter', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, 0, 'progressbar');
+
+        // Conditionally launch add field.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Questionnaire savepoint reached.
+        upgrade_mod_savepoint(true, 2022121601.01, 'questionnaire');
+    }
+
+    if ($oldversion < 2024080100.01) {
+        $table = new xmldb_table('questionnaire_question');
+        $index = new xmldb_index('quest_question_sididx', XMLDB_INDEX_NOTUNIQUE, ['surveyid', 'deleted']);
+        if ($dbman->index_exists($table, $index)) {
+            $dbman->drop_index($table, $index);
+        }
+        $field = new xmldb_field('deleted', XMLDB_TYPE_CHAR, '10', XMLDB_UNSIGNED, null, null, null, 'required');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->change_field_type($table, $field);
+        }
+        unset($field);
+
+        $field = new xmldb_field('deleted', XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, null, null, null, 'required');
+        if ($dbman->field_exists($table, $field)) {
+            // Instead of updating all 'deleted' = 'y' to a timestamp (which could be slow on large tables),
+            // simply delete those records, as they were not restorable before this upgrade.
+            $DB->delete_records('questionnaire_question', ['deleted' => 'y']);
+            // Optionally, clear 'deleted' = 'n' to null if required by new logic.
+            $DB->set_field('questionnaire_question', 'deleted', null, ['deleted' => 'n']);
+            $dbman->change_field_type($table, $field);
+        }
+        unset($field);
+        // Questionnaire savepoint reached.
+        upgrade_mod_savepoint(true, 2024080100.01, 'questionnaire');
+    }
+
     return true;
 }
 

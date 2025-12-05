@@ -54,6 +54,10 @@ class renderer extends \plugin_renderer_base {
      */
     public function render_reportpage($page) {
         $data = $page->export_for_template($this);
+        $printparam = optional_param('target', '', PARAM_TEXT);
+
+        $data->printparam = $printparam == 'print';
+
         return $this->render_from_template('mod_questionnaire/reportpage', $data);
     }
 
@@ -240,7 +244,8 @@ class renderer extends \plugin_renderer_base {
                 $pagetags->notifications = $this->notification($notification, \core\output\notification::NOTIFY_ERROR);
             }
         }
-
+        $pagetags->questionname = $question->name;
+        
         return $this->render_from_template('mod_questionnaire/question_container', $pagetags);
     }
 
